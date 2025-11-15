@@ -1,13 +1,36 @@
 version: '3.8'
 
 services:
-  app:
-    build: .
+  temporal:
+    image: temporalio/auto-setup:1.23.0
     ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
+      - "7233:7233"
+      - "8233:8233"
     environment:
-      - NODE_ENV=development
-    command: npm run dev
+      - TEMPORAL_UI=true
+
+  api:
+    build: .
+    depends_on:
+      - temporal
+    env_file:
+      - .env
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  worker:
+    build: .
+    depends_on:
+      - temporal
+    env_file:
+      - .env
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    volumes:
+      - ./data:/data
+    command: python -m app.worker

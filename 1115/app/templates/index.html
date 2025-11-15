@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="glass p-6 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-sm text-slate-400">Run Agent</p>
+                <h2 class="text-xl font-semibold text-white">Company Research</h2>
+            </div>
+            <span id="status-pill" class="px-3 py-1 rounded-full text-xs bg-slate-800 border border-slate-700 text-slate-300">Idle</span>
+        </div>
+        <form id="research-form" class="grid grid-cols-1 gap-3">
+            <div>
+                <label class="text-sm text-slate-300">Company Name *</label>
+                <input name="name" required class="input" placeholder="Acme Inc" />
+            </div>
+            <div>
+                <label class="text-sm text-slate-300">Website Domain</label>
+                <input name="domain" class="input" placeholder="acme.com" />
+            </div>
+            <div>
+                <label class="text-sm text-slate-300">Persona</label>
+                <select name="persona" class="input">
+                    <option>SDR researching an account</option>
+                    <option>AE</option>
+                    <option>Partnerships</option>
+                    <option>Custom</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-slate-300">Notes (optional)</label>
+                <textarea name="notes" rows="3" class="input" placeholder="Goals, ICP, or hints"></textarea>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="run-btn" class="btn-primary" type="submit">Run Research Agent</button>
+                <button id="demo-btn" class="btn-secondary" type="button">Run Quick Demo</button>
+            </div>
+        </form>
+        <div class="mt-6">
+            <p class="text-sm text-slate-400 mb-2">Progress</p>
+            <ul class="space-y-2 text-sm text-slate-300" id="progress-steps">
+                <li>1. Linkup search</li>
+                <li>2. Browsing and extraction</li>
+                <li>3. Summarizing with Claude</li>
+                <li>4. Generating visual</li>
+                <li>5. Saving to SmartBuckets</li>
+            </ul>
+        </div>
+    </div>
+    <div class="glass p-6 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-sm text-slate-400">Latest Snapshot</p>
+                <h2 class="text-xl font-semibold text-white" id="snapshot-title">Awaiting run</h2>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <span class="px-3 py-1 rounded-full bg-slate-800 border border-slate-700" id="policy-chip">Policy v1</span>
+            </div>
+        </div>
+        <div id="snapshot-card" class="text-slate-300 text-sm space-y-2">
+            <p class="text-slate-400">Start a run to see results.</p>
+        </div>
+    </div>
+</section>
+
+<section class="mt-8">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold text-white">Agent Wall</h3>
+        <p class="text-xs text-slate-400">Live view of up to 9 browsing agents</p>
+    </div>
+    <div id="agent-wall" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 min-h-[300px]">
+        <!-- Slots injected by JS -->
+    </div>
+</section>
+
+<section class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 glass p-6 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-white">Result Details</h3>
+            <div class="flex gap-2 text-xs">
+                <button class="tab-btn active" data-tab="brief">Brief</button>
+                <button class="tab-btn" data-tab="outreach">Outreach</button>
+                <button class="tab-btn" data-tab="evidence">Evidence</button>
+                <button class="tab-btn" data-tab="visual">Visual</button>
+            </div>
+        </div>
+        <div id="tab-brief" class="tab-pane">
+            <div id="brief-content" class="prose prose-invert max-w-none text-slate-200 text-sm">No data.</div>
+        </div>
+        <div id="tab-outreach" class="tab-pane hidden">
+            <pre id="outreach-content" class="bg-slate-900 rounded-md p-4 text-sm overflow-x-auto whitespace-pre-wrap">No data.</pre>
+        </div>
+        <div id="tab-evidence" class="tab-pane hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="text-slate-400">
+                        <tr>
+                            <th class="text-left py-2">Page</th>
+                            <th class="text-left py-2">Type</th>
+                            <th class="text-left py-2">Usefulness</th>
+                            <th class="text-left py-2">Signals</th>
+                        </tr>
+                    </thead>
+                    <tbody id="evidence-body" class="divide-y divide-slate-800"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="tab-visual" class="tab-pane hidden">
+            <div id="visual-wrapper" class="relative rounded-md overflow-hidden bg-slate-900 h-64 flex items-center justify-center text-slate-400">
+                Visual snapshot will appear here.
+            </div>
+        </div>
+    </div>
+    <div class="glass p-6 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-white">Policy & History</h3>
+            <button id="refresh-policy" class="text-xs px-3 py-1 rounded-md bg-slate-800 border border-slate-700">Refresh</button>
+        </div>
+        <div id="policy-panel" class="space-y-2 text-sm text-slate-300">
+            <p class="text-slate-400">Loading policy...</p>
+        </div>
+        <div class="mt-6">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-sm text-slate-300">Recent Runs</p>
+            </div>
+            <div id="history-list" class="space-y-2 text-sm text-slate-300">
+                <p class="text-slate-400">No history yet.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

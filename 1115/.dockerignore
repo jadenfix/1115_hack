@@ -6,3 +6,6 @@ README.md
 .env
 .DS_Store
 coverage
+__pycache__
+.pytest_cache
+.venv

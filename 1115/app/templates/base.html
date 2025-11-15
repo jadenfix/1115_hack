@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='/custom.css') }}">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <div class="bg-gradient-to-br from-cyan-500/10 via-purple-500/10 to-sky-500/5 min-h-screen">
+        <header class="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
+            <div>
+                <p class="text-sm uppercase tracking-wide text-cyan-300">Temporal Orchestrated Agent</p>
+                <h1 class="text-3xl font-semibold">{{ title }}</h1>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-300">
+                <span class="px-3 py-1 rounded-full bg-slate-800/70 border border-cyan-400/40">Linkup</span>
+                <span class="px-3 py-1 rounded-full bg-slate-800/70 border border-purple-400/40">Browser Use</span>
+                <span class="px-3 py-1 rounded-full bg-slate-800/70 border border-indigo-400/40">SmartBuckets</span>
+                <span class="px-3 py-1 rounded-full bg-slate-800/70 border border-amber-400/40">Freepik</span>
+                <span class="px-3 py-1 rounded-full bg-slate-800/70 border border-emerald-400/40">Anthropic</span>
+            </div>
+        </header>
+        <main class="max-w-6xl mx-auto px-6 pb-16">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="{{ url_for('static', path='/app.js') }}"></script>
+</body>
+</html>

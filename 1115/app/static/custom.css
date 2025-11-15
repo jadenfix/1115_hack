@@ -1,0 +1,41 @@
+.glass {
+  background: rgba(15, 23, 42, 0.75);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+.input {
+  width: 100%;
+  background: #0b1220;
+  border: 1px solid #1e293b;
+  color: #e5e7eb;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+.input:focus {
+  outline: 2px solid #22d3ee;
+}
+.btn-primary {
+  background: linear-gradient(120deg, #22d3ee, #818cf8);
+  color: #0b1220;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+.btn-secondary {
+  background: #0b1220;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+.tab-btn {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #0b1220;
+  border: 1px solid #1e293b;
+}
+.tab-btn.active {
+  border-color: #22d3ee;
+  color: #22d3ee;
+}
