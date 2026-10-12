@@ -1,8 +1,9 @@
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-DATA_DIR = Path(__file__).resolve().parent / "data"
+DATA_DIR = Path(os.environ.get("DATA_DIR", str(Path(__file__).resolve().parent / "data")))
 
 
 def _ensure_dir(path: Path) -> None:

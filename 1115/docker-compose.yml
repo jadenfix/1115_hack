@@ -17,6 +17,7 @@ services:
       - .env
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
+      - DATA_DIR=/data
     ports:
       - "8000:8000"
     volumes:
@@ -31,6 +32,7 @@ services:
       - .env
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
+      - DATA_DIR=/data
     volumes:
       - ./data:/data
     command: python -m app.worker

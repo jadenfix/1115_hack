@@ -27,22 +27,16 @@ class ResearchCompanyWorkflow:
             load_policy, schedule_to_close_timeout=timedelta(seconds=10)
         )
         linkup_results = await workflow.execute_activity(
-            fetch_company_data_from_linkup, company, policy, schedule_to_close_timeout=timedelta(seconds=30)
+            fetch_company_data_from_linkup, args=[company, policy], schedule_to_close_timeout=timedelta(seconds=30)
         )
         page_extractions = await workflow.execute_activity(
             browse_and_extract_pages,
-            company,
-            policy,
-            linkup_results,
-            workflow.info().workflow_id,
+            args=[company, policy, linkup_results, workflow.info().workflow_id],
             schedule_to_close_timeout=timedelta(minutes=5),
         )
         snapshot = await workflow.execute_activity(
             build_snapshot_with_claude,
-            company,
-            policy,
-            linkup_results,
-            page_extractions,
+            args=[company, policy, linkup_results, page_extractions],
             schedule_to_close_timeout=timedelta(seconds=90),
         )
         snapshot_with_visual = await workflow.execute_activity(
@@ -69,8 +63,7 @@ class SelfLearningWorkflow:
         )
         new_policy = await workflow.execute_activity(
             propose_new_policy_with_claude,
-            current_policy,
-            recent_metrics,
+            args=[current_policy, recent_metrics],
             schedule_to_close_timeout=timedelta(seconds=90),
         )
         new_version = await workflow.execute_activity(
