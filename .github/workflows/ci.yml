@@ -48,6 +48,8 @@ jobs:
         env:
           TEMPORAL_CLI: /tmp/temporal-cli/temporal
         run: npm run test:browser
+      - name: Verify published demo provenance and media
+        run: python scripts/verify_demo_media.py
       - name: Require clean generated state
         working-directory: .
         run: git diff --exit-code && test -z "$(git status --porcelain)"

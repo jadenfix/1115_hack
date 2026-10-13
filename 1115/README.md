@@ -18,6 +18,19 @@ outreach delivery, or production performance. `POST /api/run_research` remains t
 live path and rejects fixture-mode payloads; provider credentials and a working
 Temporal service are required for a meaningful live run.
 
+## Actual workflow demo
+
+![Provider-free fictional fixture running through Temporal](docs/demo/fixture-workflow.gif)
+
+[Watch the 960×540 MP4](docs/demo/fixture-workflow.mp4) ·
+[inspect the capture receipt](docs/demo/capture.json)
+
+This 21-second sequence was generated from actual Chromium frames after the real
+Temporal, worker, and API E2E completed at source commit `f140c2d`. It shows the
+immutable fixture, persisted Agent Wall results, evidence, outreach preview, and
+local visual. The media verifier pins every runtime input and fully decodes both
+published formats.
+
 ## Run locally
 
 ```bash
@@ -61,6 +74,12 @@ stored-DOM-injection regression:
 TEMPORAL_CLI=/path/to/temporal \
 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
 npm run test:browser
+```
+
+Verify the checked-in media and captured source inputs:
+
+```bash
+.venv/bin/python scripts/verify_demo_media.py
 ```
 
 The E2E deliberately sets provider-looking credentials and points their endpoints
