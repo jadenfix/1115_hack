@@ -1,3 +1,4 @@
+import {existsSync} from "node:fs";
 import {mkdtemp, mkdir} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
@@ -7,7 +8,8 @@ import {chromium} from "playwright-core";
 
 const root = resolve(import.meta.dirname, "..");
 const temporal = process.env.TEMPORAL_CLI || "temporal";
-const python = process.env.PYTHON || join(root, ".venv", "bin", "python");
+const virtualenvPython = join(root, ".venv", "bin", "python");
+const python = process.env.PYTHON || (existsSync(virtualenvPython) ? virtualenvPython : "python3");
 const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || chromium.executablePath();
 const address = "127.0.0.1:7331";
 const baseUrl = "http://127.0.0.1:8011";
