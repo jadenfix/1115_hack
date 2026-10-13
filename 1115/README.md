@@ -1,59 +1,101 @@
-# 1115_hack
+# Self-Evolving Account Researcher
 
-Backend scaffold for the ResearchCompany Temporal workflows described in `.md`.
+A Temporal-orchestrated research workflow with a browser Agent Wall, persisted
+evidence, and an explicit provider-free demo. The demo is intentionally fictional:
+it runs the same workflow and storage activities as live mode, but every provider
+boundary is bypassed by deterministic checked-in data.
 
-## Running locally
+## What is real in the demo
+
+- a real local Temporal server and separately running worker/API processes;
+- the full discovery → extraction → brief → visual → persistence activity chain;
+- three fictional `.invalid` evidence pages, Agent Wall state, snapshot, and metrics;
+- an immutable `POST /api/demo` entry point and visible fixture labels;
+- zero Linkup, Browser Use, Anthropic, Freepik, or SmartBuckets requests.
+
+The fixture does **not** demonstrate live company research, provider quality,
+outreach delivery, or production performance. `POST /api/run_research` remains the
+live path and rejects fixture-mode payloads; provider credentials and a working
+Temporal service are required for a meaningful live run.
+
+## Actual workflow demo
+
+![Provider-free fictional fixture running through Temporal](docs/demo/fixture-workflow.gif)
+
+[Watch the 960×540 MP4](docs/demo/fixture-workflow.mp4) ·
+[inspect the capture receipt](docs/demo/capture.json)
+
+This 21-second sequence was generated from actual Chromium frames after the real
+Temporal, worker, and API E2E completed at source commit `f140c2d`. It shows the
+immutable fixture, persisted Agent Wall results, evidence, outreach preview, and
+local visual. The media verifier pins every runtime input and fully decodes both
+published formats.
+
+## Run locally
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Services:
-- `temporal`: Temporal backed by persistent PostgreSQL
-- `temporal-ui`: UI on http://localhost:8233
-- `api`: FastAPI server on http://localhost:8000
-- `worker`: Temporal worker with activities/workflows from `.md`
-- shared `./data` volume mounts to `/data` for Agent Wall screenshots/state
+Open <http://localhost:8000>. “Run fictional demo” is safe and offline after the
+containers are installed. “Run live research” may call configured providers.
 
-API:
-- `POST /api/run_research` with JSON `{"name": "Acme", "domain": "acme.com"}` to kick off a run
-- `POST /api/self_learn` to trigger the policy updater
-- `GET /api/run/{workflow_id}/windows` powers the Agent Wall (live 3×3 grid)
+Services include PostgreSQL, Temporal, Temporal UI, FastAPI, and a Temporal worker.
+The API and worker share the configured `DATA_DIR` for snapshots, metrics, and
+Agent Wall state.
 
-UI:
-- Open `http://localhost:8000` to run the agent, watch the Agent Wall, and view snapshot tabs.
+## Verification
 
-## Regression checks
-
-Install `requirements.txt`, then run from the repository root:
+Install Python and Node dependencies from this directory:
 
 ```bash
-PYTHONPATH=1115 python -m unittest discover -s 1115/tests -v
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt pytest
+npm ci
 ```
 
-These checks validate activity dispatch against the installed Temporal SDK,
-independent workflow IDs, and snapshot visibility across separate processes.
-They do not call external providers or require a Temporal server. A live run still
-requires a working Temporal service and provider credentials. Both Docker services
-set `DATA_DIR=/data` so the worker and API use the same persistent volume; local
-Python runs default to `app/data`, or may set `DATA_DIR` explicitly.
-
-## Real local Temporal check
-
-Install the [Temporal CLI](https://github.com/temporalio/cli), then from the `1115` directory:
+Run the unit/regression suite:
 
 ```bash
-PYTHONPATH=. python scripts/check_temporal.py
+.venv/bin/python -m pytest -q
 ```
 
-This starts an actual persistent SQLite Temporal development server and default
-sandboxed worker, runs both workflows, checks stored snapshots and policy state,
-and shuts the server down. Linkup supplies one explicitly labeled fixture URL;
-other providers use their credential-free fallbacks. This verifies orchestration
-and persistence, not live company research. `TEMPORAL_CLI` can select an executable
-and `TEMPORAL_TEST_DB` can select the durable test database.
+Run the fixture through a real Temporal development server:
 
-Compose supplies PostgreSQL and a separate UI rather than assuming auto-setup
-includes a database/UI. It waits for database and Temporal health before API/worker
-startup. Compose execution needs Docker; it was not available in the audit runtime.
+```bash
+TEMPORAL_CLI=/path/to/temporal .venv/bin/python -m scripts.check_temporal
+```
+
+Run the separate-process Temporal + worker + API + Chromium E2E, including a
+stored-DOM-injection regression:
+
+```bash
+TEMPORAL_CLI=/path/to/temporal \
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
+npm run test:browser
+```
+
+Verify the checked-in media and captured source inputs:
+
+```bash
+.venv/bin/python scripts/verify_demo_media.py
+```
+
+The E2E deliberately sets provider-looking credentials and points their endpoints
+at a closed local port. Completion proves the fixture path did not cross those
+provider boundaries. The browser renderer uses DOM text nodes and permits only
+HTTP(S) links; it no longer inserts API values through `innerHTML`.
+
+## API
+
+- `POST /api/demo` starts the immutable fictional fixture.
+- `POST /api/run_research` starts live mode with `name`, optional `domain`,
+  `persona`, and `notes`.
+- `GET /api/run_status?workflow_id=…` reports workflow state.
+- `GET /api/run/{workflow_id}/windows` returns validated Agent Wall state.
+- `GET /api/snapshot/{snapshot_id}` and `GET /api/history` return persisted output.
+- `POST /api/self_learn` runs the live provider-backed policy updater.
+
+The application ships all visual CSS locally; it does not depend on a CDN to
+render the interface.

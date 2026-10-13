@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "fixture_id": "northstar-v1",
+  "scope": "Fictional provider-free data through a real local Temporal server, separate worker/API processes, persistence, and Chromium UI. No external provider, live company, outreach delivery, accuracy, or performance claim.",
+  "source_commit": "f140c2d66339fc5cbb1cdc4804e2a791aa6207aa",
+  "source_tree": "3b6b3885381786a3e07ca9b8e941d60c15bc0302",
+  "verification": {
+    "unit": "12 passed",
+    "temporal": "REAL_TEMPORAL_FIXTURE_OK links=3 pages=3 providers=0",
+    "browser": "BROWSER_E2E_OK fixture=3-pages temporal=real processes=separate dom_xss=blocked providers=0"
+  },
+  "artifacts": {
+    "fixture-workflow.gif": {
+      "sha256": "5d4fbc823489d4b35c4ed94943672cb28224fc458a57ff0913c9fa23c806738d",
+      "width": 512,
+      "height": 288,
+      "duration_seconds": 21.0
+    },
+    "fixture-workflow.mp4": {
+      "sha256": "4706589c0eadbd31f3f59b1e3bd04e141258a71e4dfaaa97022990c9332a7f5f",
+      "width": 960,
+      "height": 540,
+      "duration_seconds": 21.0
+    },
+    "poster.png": {
+      "sha256": "5695caed0b4f83235c26bcbbe121018519c0643d4505a21f7d1bfdc677febe6e",
+      "width": 960,
+      "height": 540
+    }
+  },
+  "source_blobs": {
+    "app/__init__.py": "234651c9dc825aa35d709fb695aebcc8c1e812d7",
+    "app/activities.py": "69e7c8742fa62178df2b70c17cf99436bf774a2f",
+    "app/agent_wall.py": "20bc56a44d8368e2334d5284426e23c9798778a3",
+    "app/clients/__init__.py": "c152e6324152c26bfb6d6f2dd35d88bab881050c",
+    "app/clients/anthropic_client.py": "ebf24b74eee1d76740267cd67c133d0e03bec16a",
+    "app/clients/browser_use.py": "d590debb0d7dc17e5db1062189f39a5dd46ee354",
+    "app/clients/freepik.py": "4b8ee989caa4c5ef6e5d43af3aa34f9302594aef",
+    "app/clients/linkup.py": "67a197540fd7086d0e281d036f6b6f58d6f8bb7f",
+    "app/clients/smartbuckets.py": "816f5ec37f3c3437a3f26999d06d6a6b1d0a4454",
+    "app/config.py": "528c088ff666c9914792efe560df84604f49883c",
+    "app/converter.py": "e3276ece7757d0347116f311a0769391a51ec9d1",
+    "app/fixtures.py": "d2446ad7c4dfb1e999b01d3b9ca414b1154b6cf3",
+    "app/main.py": "e4c8721d8349d323a0c9c8801b7527fb8a7dcefa",
+    "app/models.py": "c2b26f3630d4ba38fa4607783b156ea1336515bc",
+    "app/static/app.js": "b3ec3eb08691436122c1ca20843981914ef16ac1",
+    "app/static/custom.css": "9e59d5206f7a2e0d9b54ef808a4c5842236b84a0",
+    "app/storage.py": "7634f00bc472ab6de7c14fb2ca0e98bf7a3ed068",
+    "app/templates/base.html": "cee74bb0df9c9ce9e6d60621b00f22ed19e734b2",
+    "app/templates/index.html": "2dc830476a0b3af955f2730f2fd51fdc7d561738",
+    "app/worker.py": "c9f37f48a750bf6f0dc1fe43f5ce3b965665bdca",
+    "app/workflows.py": "b2c7b222808346b13adca5cafc987bf4ff3422bb",
+    "package-lock.json": "8d134792095f5648125fba63b964a06683935e8d",
+    "requirements.txt": "2a268f5824573e9189d626affee6271f7cd44def",
+    "tests/browser_e2e.mjs": "a89c61dfed52410d42f1a2f42ab132e5111ec7ff"
+  }
+}

@@ -1,19 +1,15 @@
 {
   "name": "1115_hack",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Temporal-orchestrated account research with a truthful provider-free fixture demo",
+  "private": true,
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "test:browser": "node tests/browser_e2e.mjs"
   },
   "keywords": [],
-  "author": "",
+  "author": "Jaden Fix",
   "license": "ISC",
-  "dependencies": {
-    "express": "^4.18.2"
-  },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "playwright-core": "1.55.1"
   }
 }
