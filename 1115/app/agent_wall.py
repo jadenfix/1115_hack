@@ -1,6 +1,5 @@
 import json
-import os
-from datetime import datetime
+import re
 from pathlib import Path
 from typing import List
 
@@ -11,16 +10,19 @@ DATA_ROOT = DATA_DIR
 
 RUNS_DIR = DATA_ROOT / "runs"
 RUNS_DIR.mkdir(parents=True, exist_ok=True)
+RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 def _windows_path(run_id: str) -> Path:
+    if not RUN_ID_PATTERN.fullmatch(run_id):
+        raise ValueError("Invalid run identifier")
     return RUNS_DIR / run_id / "windows.json"
 
 
 def update_window_state(run_id: str, window: AgentWindowState) -> None:
-    run_dir = RUNS_DIR / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
     path = _windows_path(run_id)
+    run_dir = path.parent
+    run_dir.mkdir(parents=True, exist_ok=True)
     current: List[AgentWindowState] = []
     if path.exists():
         try:
@@ -31,7 +33,9 @@ def update_window_state(run_id: str, window: AgentWindowState) -> None:
     filtered = [w for w in current if w.slot != window.slot]
     filtered.append(window)
     filtered.sort(key=lambda w: w.slot)
-    path.write_text(json.dumps([w.model_dump() for w in filtered], default=str, indent=2))
+    path.write_text(
+        json.dumps([w.model_dump() for w in filtered], default=str, indent=2)
+    )
 
 
 def list_window_states(run_id: str) -> List[AgentWindowState]:

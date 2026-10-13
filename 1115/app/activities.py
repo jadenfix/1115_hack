@@ -1,16 +1,16 @@
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional
 
 from temporalio import activity
 
-from app.clients import anthropic_client, browser_use, freepik, linkup, smartbuckets
-from app.config import settings
 from app import storage
 from app.agent_wall import update_window_state
-from app.models import AgentWindowState
+from app.clients import anthropic_client, browser_use, freepik, linkup, smartbuckets
+from app.fixtures import FIXTURE_NOTICE, FIXTURE_PAGES, fixture_linkup_results
 from app.models import (
+    AgentWindowState,
     BrowsingPolicy,
     CompanyInput,
     CompanySnapshot,
@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 @activity.defn
-async def load_policy() -> BrowsingPolicy:
+async def load_policy(company: Optional[CompanyInput] = None) -> BrowsingPolicy:
+    if company and company.mode == "fixture":
+        return BrowsingPolicy(version="fixture-v1", max_search_results=3)
     stored = await smartbuckets.fetch_latest_policy()
     if not stored:
         stored = storage.read_json("policy/latest.json")
@@ -36,7 +38,11 @@ async def load_policy() -> BrowsingPolicy:
 
 
 @activity.defn
-async def fetch_company_data_from_linkup(company: CompanyInput, policy: BrowsingPolicy) -> List[LinkupResult]:
+async def fetch_company_data_from_linkup(
+    company: CompanyInput, policy: BrowsingPolicy
+) -> List[LinkupResult]:
+    if company.mode == "fixture":
+        return fixture_linkup_results()[: policy.max_search_results]
     query_text = policy.linkup_query_template.format(
         company_name=company.name, domain=company.domain or "", persona=company.persona
     )
@@ -51,9 +57,18 @@ async def fetch_company_data_from_linkup(company: CompanyInput, policy: Browsing
 
 
 async def _score_usefulness(page: PageExtraction, persona: str) -> float:
-    schema = {"type": "object", "properties": {"usefulness_score": {"type": "number"}}, "required": ["usefulness_score"]}
-    prompt = f"""Given the extracted data:\n{page.model_dump_json()}\nRate usefulness 0-1 for persona {persona}."""
-    data = await anthropic_client.claude_json_call("Score page usefulness", prompt, schema)
+    schema = {
+        "type": "object",
+        "properties": {"usefulness_score": {"type": "number"}},
+        "required": ["usefulness_score"],
+    }
+    prompt = (
+        f"Given the extracted data:\n{page.model_dump_json()}\n"
+        f"Rate usefulness 0-1 for persona {persona}."
+    )
+    data = await anthropic_client.claude_json_call(
+        "Score page usefulness", prompt, schema
+    )
     score = data.get("usefulness_score") if isinstance(data, dict) else None
     try:
         return float(score)
@@ -63,10 +78,15 @@ async def _score_usefulness(page: PageExtraction, persona: str) -> float:
 
 @activity.defn
 async def browse_and_extract_pages(
-    company: CompanyInput, policy: BrowsingPolicy, linkup_results: List[LinkupResult], run_id: str
+    company: CompanyInput,
+    policy: BrowsingPolicy,
+    linkup_results: List[LinkupResult],
+    run_id: str,
 ) -> List[PageExtraction]:
     urls = [str(res.url) for res in linkup_results]
-    chosen_urls = browser_use.choose_urls(urls, policy.preferred_paths, policy.max_pages_per_domain)
+    chosen_urls = browser_use.choose_urls(
+        urls, policy.preferred_paths, policy.max_pages_per_domain
+    )
     extractions: List[PageExtraction] = []
     for slot, url in enumerate(chosen_urls[:9]):
         start_state = AgentWindowState(
@@ -78,10 +98,15 @@ async def browse_and_extract_pages(
             screenshot_url="/static/placeholder.png",
             usefulness_score=None,
             updated_at=datetime.utcnow(),
+            mode=company.mode,
         )
         update_window_state(run_id, start_state)
 
-        raw = await browser_use.extract_page(str(url), company.name)
+        if company.mode == "fixture":
+            page = FIXTURE_PAGES[str(url)].model_copy(deep=True)
+            raw = page.model_dump()
+        else:
+            raw = await browser_use.extract_page(str(url), company.name)
         loading_state = start_state.model_copy(
             update={
                 "status": "extracting",
@@ -107,12 +132,14 @@ async def browse_and_extract_pages(
             usefulness_score=base_score,
             notes=raw.get("notes"),
         )
-        page.usefulness_score = await _score_usefulness(page, company.persona)
+        if company.mode != "fixture":
+            page.usefulness_score = await _score_usefulness(page, company.persona)
         extractions.append(page)
         done_state = loading_state.model_copy(
             update={
                 "status": "done",
                 "last_action": "Extraction completed",
+                "page_type": page.page_type,
                 "usefulness_score": page.usefulness_score,
                 "updated_at": datetime.utcnow(),
             }
@@ -130,15 +157,35 @@ async def build_snapshot_with_claude(
 ) -> CompanySnapshot:
     schema = {
         "type": "object",
-        "properties": {"brief_md": {"type": "string"}, "outreach_message": {"type": "string"}},
+        "properties": {
+            "brief_md": {"type": "string"},
+            "outreach_message": {"type": "string"},
+        },
         "required": ["brief_md", "outreach_message"],
     }
     prompt = f"""Build a concise research brief and outreach message for {company.name}.
-Linkup results: { [r.model_dump() for r in linkup_results] }
-Pages: { [p.model_dump() for p in page_extractions] }"""
-    claude_output = await anthropic_client.claude_json_call(
-        "You are an SDR research assistant. Return JSON.", prompt, schema
-    )
+Linkup results: {[r.model_dump() for r in linkup_results]}
+Pages: {[p.model_dump() for p in page_extractions]}"""
+    if company.mode == "fixture":
+        claude_output = {
+            "brief_md": (
+                "Northstar Labs is a fictional operations-workflow company. "
+                "The checked-in fixture shows three evidence pages covering product, "
+                "solutions, and pricing. Its strongest fictional signals are "
+                "repeatable playbooks, shared evidence, "
+                "and audit trails."
+            ),
+            "outreach_message": (
+                "Fixture preview only — not a message to send.\n\n"
+                "Hi Northstar Labs team, your fictional focus on repeatable "
+                "playbooks and "
+                "shared evidence suggests an operations-led motion worth exploring."
+            ),
+        }
+    else:
+        claude_output = await anthropic_client.claude_json_call(
+            "You are an SDR research assistant. Return JSON.", prompt, schema
+        )
     snapshot = CompanySnapshot(
         snapshot_id=str(uuid.uuid4()),
         company=company,
@@ -151,12 +198,16 @@ Pages: { [p.model_dump() for p in page_extractions] }"""
             "outreach_message", f"Hi {company.name}, excited to connect and learn more!"
         ),
         freepik_asset_url=None,
+        mode=company.mode,
+        fixture_notice=FIXTURE_NOTICE if company.mode == "fixture" else None,
     )
     return snapshot
 
 
 @activity.defn
 async def attach_freepik_visual(snapshot: CompanySnapshot) -> CompanySnapshot:
+    if snapshot.mode == "fixture":
+        return snapshot
     asset = await freepik.fetch_visual_asset(query=snapshot.company.name)
     snapshot.freepik_asset_url = asset
     return snapshot
@@ -165,7 +216,8 @@ async def attach_freepik_visual(snapshot: CompanySnapshot) -> CompanySnapshot:
 @activity.defn
 async def write_snapshot_to_memory(snapshot: CompanySnapshot) -> str:
     path = f"{snapshot.company.name}/snapshots/{snapshot.snapshot_id}.json"
-    await smartbuckets.store_json(path, snapshot.model_dump())
+    if snapshot.mode != "fixture":
+        await smartbuckets.store_json(path, snapshot.model_dump())
     storage.write_json(f"snapshots/{snapshot.snapshot_id}.json", snapshot.model_dump())
     return snapshot.snapshot_id
 
@@ -182,12 +234,15 @@ async def log_run_metrics(snapshot: CompanySnapshot) -> None:
         num_pages_visited=len(snapshot.pages),
         num_useful_pages=len(useful_pages),
         avg_usefulness=(
-            sum(p.usefulness_score for p in snapshot.pages) / max(len(snapshot.pages), 1)
+            sum(p.usefulness_score for p in snapshot.pages)
+            / max(len(snapshot.pages), 1)
         ),
         tool_failures={"linkup": 0, "browser_use": 0, "freepik": 0},
+        mode=snapshot.mode,
     )
     path = f"metrics/{snapshot.snapshot_id}.json"
-    await smartbuckets.store_json(path, metrics.model_dump())
+    if snapshot.mode != "fixture":
+        await smartbuckets.store_json(path, metrics.model_dump())
     storage.write_json(path, metrics.model_dump())
 
 
@@ -229,7 +284,8 @@ async def propose_new_policy_with_claude(
         ],
     }
     prompt = (
-        "Given the current policy and metrics, propose a new policy tuned for better useful page rate.\n"
+        "Given the current policy and metrics, propose a new policy tuned "
+        "for better useful page rate.\n"
         f"Current policy: {current_policy.model_dump_json()}\n"
         f"Metrics: {[m.model_dump() for m in metrics]}"
     )
@@ -237,15 +293,28 @@ async def propose_new_policy_with_claude(
         "You adjust crawling policy for SDR research.", prompt, schema
     )
     try:
-        version = output.get("version") or f"v{int(current_policy.version.lstrip('v') or '1') + 1}"
+        version = (
+            output.get("version")
+            or f"v{int(current_policy.version.lstrip('v') or '1') + 1}"
+        )
         return BrowsingPolicy(
             version=version,
-            linkup_query_template=output.get("linkup_query_template", current_policy.linkup_query_template),
-            max_search_results=output.get("max_search_results", current_policy.max_search_results),
+            linkup_query_template=output.get(
+                "linkup_query_template", current_policy.linkup_query_template
+            ),
+            max_search_results=output.get(
+                "max_search_results", current_policy.max_search_results
+            ),
             allowed_domains=current_policy.allowed_domains,
-            preferred_paths=output.get("preferred_paths", current_policy.preferred_paths),
-            max_pages_per_domain=output.get("max_pages_per_domain", current_policy.max_pages_per_domain),
-            min_usefulness_threshold=output.get("min_usefulness_threshold", current_policy.min_usefulness_threshold),
+            preferred_paths=output.get(
+                "preferred_paths", current_policy.preferred_paths
+            ),
+            max_pages_per_domain=output.get(
+                "max_pages_per_domain", current_policy.max_pages_per_domain
+            ),
+            min_usefulness_threshold=output.get(
+                "min_usefulness_threshold", current_policy.min_usefulness_threshold
+            ),
         )
     except Exception as exc:
         logger.error("Policy proposal failed, returning current policy: %s", exc)

@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class CompanyInput(BaseModel):
@@ -9,6 +9,7 @@ class CompanyInput(BaseModel):
     domain: Optional[str] = None
     persona: str = "SDR researching an account"
     notes: Optional[str] = None
+    mode: Literal["live", "fixture"] = "live"
 
 
 class LinkupResult(BaseModel):
@@ -22,9 +23,9 @@ class PageExtraction(BaseModel):
     url: HttpUrl
     page_type: str
     icp: Optional[str] = None
-    product_lines: List[str] = []
-    pain_points: List[str] = []
-    signals: List[str] = []
+    product_lines: List[str] = Field(default_factory=list)
+    pain_points: List[str] = Field(default_factory=list)
+    signals: List[str] = Field(default_factory=list)
     raw_text_excerpt: str
     usefulness_score: float
     notes: Optional[str] = None
@@ -40,16 +41,21 @@ class CompanySnapshot(BaseModel):
     brief_md: str
     outreach_message: str
     freepik_asset_url: Optional[str] = None
+    mode: Literal["live", "fixture"] = "live"
+    fixture_notice: Optional[str] = None
 
 
 class BrowsingPolicy(BaseModel):
     version: str = "v1"
     linkup_query_template: str = (
-        "research {company_name} {domain} {persona} pricing product lines solutions case studies"
+        "research {company_name} {domain} {persona} pricing product lines "
+        "solutions case studies"
     )
     max_search_results: int = 5
-    allowed_domains: List[str] = []
-    preferred_paths: List[str] = ["/about", "/pricing", "/solutions", "/product"]
+    allowed_domains: List[str] = Field(default_factory=list)
+    preferred_paths: List[str] = Field(
+        default_factory=lambda: ["/about", "/pricing", "/solutions", "/product"]
+    )
     max_pages_per_domain: int = 4
     min_usefulness_threshold: float = 0.2
 
@@ -63,6 +69,7 @@ class RunMetrics(BaseModel):
     num_useful_pages: int
     avg_usefulness: float
     tool_failures: Dict[str, int]
+    mode: Literal["live", "fixture"] = "live"
 
 
 class AgentWindowState(BaseModel):
@@ -74,3 +81,4 @@ class AgentWindowState(BaseModel):
     screenshot_url: Optional[str] = None
     usefulness_score: Optional[float] = None
     updated_at: datetime
+    mode: Literal["live", "fixture"] = "live"

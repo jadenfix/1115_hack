@@ -1,5 +1,4 @@
 from datetime import timedelta
-from typing import List
 
 from temporalio import workflow
 
@@ -20,16 +19,17 @@ with workflow.unsafe.imports_passed_through():
     from app.models import CompanyInput
 
 
-
 @workflow.defn
 class ResearchCompanyWorkflow:
     @workflow.run
     async def run(self, company: CompanyInput) -> str:
         policy = await workflow.execute_activity(
-            load_policy, schedule_to_close_timeout=timedelta(seconds=10)
+            load_policy, company, schedule_to_close_timeout=timedelta(seconds=10)
         )
         linkup_results = await workflow.execute_activity(
-            fetch_company_data_from_linkup, args=[company, policy], schedule_to_close_timeout=timedelta(seconds=30)
+            fetch_company_data_from_linkup,
+            args=[company, policy],
+            schedule_to_close_timeout=timedelta(seconds=30),
         )
         page_extractions = await workflow.execute_activity(
             browse_and_extract_pages,
@@ -42,13 +42,19 @@ class ResearchCompanyWorkflow:
             schedule_to_close_timeout=timedelta(seconds=90),
         )
         snapshot_with_visual = await workflow.execute_activity(
-            attach_freepik_visual, snapshot, schedule_to_close_timeout=timedelta(seconds=20)
+            attach_freepik_visual,
+            snapshot,
+            schedule_to_close_timeout=timedelta(seconds=20),
         )
         snapshot_id = await workflow.execute_activity(
-            write_snapshot_to_memory, snapshot_with_visual, schedule_to_close_timeout=timedelta(seconds=20)
+            write_snapshot_to_memory,
+            snapshot_with_visual,
+            schedule_to_close_timeout=timedelta(seconds=20),
         )
         await workflow.execute_activity(
-            log_run_metrics, snapshot_with_visual, schedule_to_close_timeout=timedelta(seconds=10)
+            log_run_metrics,
+            snapshot_with_visual,
+            schedule_to_close_timeout=timedelta(seconds=10),
         )
         return snapshot_id
 
@@ -58,7 +64,8 @@ class SelfLearningWorkflow:
     @workflow.run
     async def run(self) -> str:
         recent_metrics = await workflow.execute_activity(
-            fetch_recent_metrics_from_memory, schedule_to_close_timeout=timedelta(seconds=30)
+            fetch_recent_metrics_from_memory,
+            schedule_to_close_timeout=timedelta(seconds=30),
         )
         current_policy = await workflow.execute_activity(
             load_policy, schedule_to_close_timeout=timedelta(seconds=10)

@@ -1,5 +1,5 @@
-import uuid
 import logging
+import uuid
 from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Optional
@@ -11,10 +11,11 @@ from fastapi.templating import Jinja2Templates
 from temporalio.client import Client
 
 from app import storage
+from app.activities import load_policy
 from app.agent_wall import list_window_states
-from app.activities import fetch_recent_metrics_from_memory, load_policy
 from app.config import settings
 from app.converter import data_converter
+from app.fixtures import fixture_company
 from app.models import CompanyInput
 from app.workflows import ResearchCompanyWorkflow, SelfLearningWorkflow
 
@@ -25,12 +26,14 @@ app = FastAPI(title="ResearchCompany Orchestrator")
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
-if Path("/data").exists():
-    app.mount("/runs", StaticFiles(directory="/data"), name="runs")
 
 
 async def get_temporal_client() -> Client:
-    return await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace, data_converter=data_converter)
+    return await Client.connect(
+        settings.temporal_address,
+        namespace=settings.temporal_namespace,
+        data_converter=data_converter,
+    )
 
 
 @app.on_event("startup")
@@ -60,6 +63,14 @@ async def health() -> dict:
 
 @app.post("/api/run_research")
 async def start_research(company: CompanyInput) -> dict:
+    if company.mode != "live":
+        raise HTTPException(
+            status_code=400, detail="Use /api/demo for the immutable fixture"
+        )
+    return await _start_company_workflow(company)
+
+
+async def _start_company_workflow(company: CompanyInput) -> dict:
     try:
         client = await get_temporal_client()
         handle = await client.start_workflow(
@@ -69,10 +80,20 @@ async def start_research(company: CompanyInput) -> dict:
             task_queue=settings.temporal_task_queue,
             execution_timeout=timedelta(seconds=settings.workflow_run_timeout_seconds),
         )
-        return {"workflow_id": handle.id, "run_id": handle.first_execution_run_id}
+        return {
+            "workflow_id": handle.id,
+            "run_id": handle.first_execution_run_id,
+            "mode": company.mode,
+        }
     except Exception as exc:
         logger.error("Failed to start ResearchCompanyWorkflow: %s", exc)
         raise HTTPException(status_code=500, detail="Unable to start workflow") from exc
+
+
+@app.post("/api/demo")
+async def start_demo() -> dict:
+    """Start the one immutable, fictional, provider-free demo fixture."""
+    return await _start_company_workflow(fixture_company())
 
 
 @app.get("/api/run_status")
@@ -82,7 +103,11 @@ async def run_status(workflow_id: str = Query(...)) -> dict:
         handle = client.get_workflow_handle(workflow_id=workflow_id)
         info = await handle.describe()
         status = info.status.name if hasattr(info.status, "name") else str(info.status)
-        response: Dict[str, Optional[str]] = {"status": status, "snapshot_id": None, "error": None}
+        response: Dict[str, Optional[str]] = {
+            "status": status,
+            "snapshot_id": None,
+            "error": None,
+        }
         if status == "COMPLETED":
             try:
                 response["snapshot_id"] = await handle.result()
@@ -104,7 +129,10 @@ async def get_snapshot(snapshot_id: str) -> dict:
 
 @app.get("/api/run/{run_id}/windows")
 async def get_run_windows(run_id: str) -> dict:
-    windows = list_window_states(run_id)
+    try:
+        windows = list_window_states(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid run identifier") from exc
     return {"items": [w.model_dump() for w in windows]}
 
 
@@ -143,4 +171,6 @@ async def start_self_learning() -> dict:
         return {"workflow_id": handle.id, "run_id": handle.first_execution_run_id}
     except Exception as exc:
         logger.error("Failed to start SelfLearningWorkflow: %s", exc)
-        raise HTTPException(status_code=500, detail="Unable to start self-learning workflow") from exc
+        raise HTTPException(
+            status_code=500, detail="Unable to start self-learning workflow"
+        ) from exc
