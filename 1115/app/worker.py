@@ -7,6 +7,7 @@ from temporalio.worker import Worker
 
 from app import activities
 from app.config import settings
+from app.converter import data_converter
 from app.workflows import ResearchCompanyWorkflow, SelfLearningWorkflow
 
 logging.basicConfig(level=logging.INFO)
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 async def run_worker() -> None:
-    client = await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace)
+    client = await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace, data_converter=data_converter)
     executor = ThreadPoolExecutor(max_workers=settings.worker_max_concurrency)
     worker = Worker(
         client,

@@ -14,6 +14,7 @@ from app import storage
 from app.agent_wall import list_window_states
 from app.activities import fetch_recent_metrics_from_memory, load_policy
 from app.config import settings
+from app.converter import data_converter
 from app.models import CompanyInput
 from app.workflows import ResearchCompanyWorkflow, SelfLearningWorkflow
 
@@ -29,7 +30,7 @@ if Path("/data").exists():
 
 
 async def get_temporal_client() -> Client:
-    return await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace)
+    return await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace, data_converter=data_converter)
 
 
 @app.on_event("startup")

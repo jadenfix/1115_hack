@@ -3,20 +3,22 @@ from typing import List
 
 from temporalio import workflow
 
-from app.activities import (
-    attach_freepik_visual,
-    browse_and_extract_pages,
-    build_snapshot_with_claude,
-    fetch_company_data_from_linkup,
-    fetch_recent_metrics_from_memory,
-    load_policy,
-    log_run_metrics,
-    propose_new_policy_with_claude,
-    save_new_policy,
-    write_snapshot_to_memory,
-)
-from app.config import settings
-from app.models import CompanyInput
+# Activity modules use network clients and environment configuration outside replay.
+with workflow.unsafe.imports_passed_through():
+    from app.activities import (
+        attach_freepik_visual,
+        browse_and_extract_pages,
+        build_snapshot_with_claude,
+        fetch_company_data_from_linkup,
+        fetch_recent_metrics_from_memory,
+        load_policy,
+        log_run_metrics,
+        propose_new_policy_with_claude,
+        save_new_policy,
+        write_snapshot_to_memory,
+    )
+    from app.models import CompanyInput
+
 
 
 @workflow.defn
