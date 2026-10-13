@@ -1,4 +1,4 @@
-import asyncio
+import uuid
 import logging
 from datetime import timedelta
 from pathlib import Path
@@ -14,6 +14,7 @@ from app import storage
 from app.agent_wall import list_window_states
 from app.activities import fetch_recent_metrics_from_memory, load_policy
 from app.config import settings
+from app.converter import data_converter
 from app.models import CompanyInput
 from app.workflows import ResearchCompanyWorkflow, SelfLearningWorkflow
 
@@ -29,7 +30,7 @@ if Path("/data").exists():
 
 
 async def get_temporal_client() -> Client:
-    return await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace)
+    return await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace, data_converter=data_converter)
 
 
 @app.on_event("startup")
@@ -64,7 +65,7 @@ async def start_research(company: CompanyInput) -> dict:
         handle = await client.start_workflow(
             ResearchCompanyWorkflow.run,
             company,
-            id=f"research-{company.name}-{id(company)}",
+            id=f"research-{uuid.uuid4()}",
             task_queue=settings.temporal_task_queue,
             execution_timeout=timedelta(seconds=settings.workflow_run_timeout_seconds),
         )
@@ -135,7 +136,7 @@ async def start_self_learning() -> dict:
         client = await get_temporal_client()
         handle = await client.start_workflow(
             SelfLearningWorkflow.run,
-            id=f"self-learn-{id(asyncio)}",
+            id=f"self-learn-{uuid.uuid4()}",
             task_queue=settings.temporal_task_queue,
             execution_timeout=timedelta(seconds=120),
         )

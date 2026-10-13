@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 @activity.defn
 async def load_policy() -> BrowsingPolicy:
     stored = await smartbuckets.fetch_latest_policy()
+    if not stored:
+        stored = storage.read_json("policy/latest.json")
     if stored:
         try:
             return BrowsingPolicy(**stored)
@@ -63,7 +65,7 @@ async def _score_usefulness(page: PageExtraction, persona: str) -> float:
 async def browse_and_extract_pages(
     company: CompanyInput, policy: BrowsingPolicy, linkup_results: List[LinkupResult], run_id: str
 ) -> List[PageExtraction]:
-    urls = [res.url for res in linkup_results]
+    urls = [str(res.url) for res in linkup_results]
     chosen_urls = browser_use.choose_urls(urls, policy.preferred_paths, policy.max_pages_per_domain)
     extractions: List[PageExtraction] = []
     for slot, url in enumerate(chosen_urls[:9]):
@@ -192,6 +194,8 @@ async def log_run_metrics(snapshot: CompanySnapshot) -> None:
 @activity.defn
 async def fetch_recent_metrics_from_memory() -> List[RunMetrics]:
     raw_metrics = await smartbuckets.fetch_recent_metrics(limit=20)
+    if not raw_metrics:
+        raw_metrics = storage.list_json("metrics")[:20]
     parsed = []
     for m in raw_metrics:
         try:

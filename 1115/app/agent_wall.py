@@ -5,10 +5,9 @@ from pathlib import Path
 from typing import List
 
 from app.models import AgentWindowState
+from app.storage import DATA_DIR
 
-DATA_ROOT = Path("/data")
-if not DATA_ROOT.exists():
-    DATA_ROOT = Path(__file__).resolve().parent / "data"
+DATA_ROOT = DATA_DIR
 
 RUNS_DIR = DATA_ROOT / "runs"
 RUNS_DIR.mkdir(parents=True, exist_ok=True)
