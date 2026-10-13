@@ -43,7 +43,7 @@ jobs:
       - name: Install browser dependencies
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          npx playwright-core install --with-deps chromium
       - name: Run separate-process browser E2E
         env:
           TEMPORAL_CLI: /tmp/temporal-cli/temporal
