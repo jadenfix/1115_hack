@@ -1,9 +1,18 @@
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-DATA_DIR = Path(os.environ.get("DATA_DIR", str(Path(__file__).resolve().parent / "data")))
+DATA_DIR = Path(os.environ.get("DATA_DIR", "/data" if Path("/data").exists() else str(Path(__file__).resolve().parent / "data")))
+
+
+def _target(relative_path: str) -> Path:
+    base = DATA_DIR.resolve()
+    target = (base / relative_path).resolve()
+    if target == base or not target.is_relative_to(base):
+        raise ValueError("Storage path must stay inside DATA_DIR")
+    return target
 
 
 def _ensure_dir(path: Path) -> None:
@@ -11,14 +20,27 @@ def _ensure_dir(path: Path) -> None:
 
 
 def write_json(relative_path: str, payload: Dict[str, Any]) -> str:
-    target = DATA_DIR / relative_path
+    target = _target(relative_path)
     _ensure_dir(target)
-    target.write_text(json.dumps(payload, default=str, indent=2))
+    # Readers see a complete snapshot even while a worker replaces it.
+    with tempfile.NamedTemporaryFile(mode="w", dir=target.parent, delete=False) as handle:
+        temporary = Path(handle.name)
+        try:
+            json.dump(payload, handle, default=str, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+    try:
+        temporary.replace(target)
+    finally:
+        temporary.unlink(missing_ok=True)
     return str(target)
 
 
 def read_json(relative_path: str) -> Optional[Dict[str, Any]]:
-    target = DATA_DIR / relative_path
+    target = _target(relative_path)
     if not target.exists():
         return None
     try:
@@ -28,7 +50,7 @@ def read_json(relative_path: str) -> Optional[Dict[str, Any]]:
 
 
 def list_json(prefix: str) -> List[Dict[str, Any]]:
-    base = DATA_DIR / prefix
+    base = _target(prefix)
     if not base.exists():
         return []
     results = []
